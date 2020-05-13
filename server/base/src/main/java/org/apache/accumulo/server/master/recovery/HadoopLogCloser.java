@@ -64,8 +64,7 @@ public class HadoopLogCloser implements LogCloser {
         ns.append(source).close();
         log.info("Recovered lease on " + source.toString() + " using append");
       }
-    } else if (ns instanceof LocalFileSystem || ns instanceof RawLocalFileSystem
-            || ns instanceof alluxio.hadoop.FileSystem) {
+    } else if (ns instanceof LocalFileSystem || ns instanceof RawLocalFileSystem) {
       // ignore
     } else {
       throw new IllegalStateException(
