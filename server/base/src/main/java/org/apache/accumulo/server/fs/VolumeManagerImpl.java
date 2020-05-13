@@ -19,15 +19,19 @@ package org.apache.accumulo.server.fs;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URI;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeoutException;
 
+import alluxio.AlluxioURI;
+import alluxio.client.file.URIStatus;
+import alluxio.exception.FileIncompleteException;
+import alluxio.hadoop.AbstractFileSystem;
+import alluxio.hadoop.HadoopUtils;
+import alluxio.util.CommonUtils;
+import alluxio.util.WaitForOptions;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
 import org.apache.accumulo.core.conf.Property;
@@ -71,6 +75,7 @@ public class VolumeManagerImpl implements VolumeManager {
   private final Multimap<URI,Volume> volumesByFileSystemUri;
   private final Volume defaultVolume;
   private final VolumeChooser chooser;
+  private static final int MAX_OPEN_WAITTIME_MS = 5000;
 
   protected VolumeManagerImpl(Map<String,Volume> volumes, Volume defaultVolume,
       AccumuloConfiguration conf) {
@@ -294,7 +299,52 @@ public class VolumeManagerImpl implements VolumeManager {
 
   @Override
   public FSDataInputStream open(Path path) throws IOException {
-    return getVolumeByPath(path).getFileSystem().open(path);
+    final FileSystem fileSystem = getVolumeByPath(path).getFileSystem();
+
+    try {
+      return fileSystem.open(path);
+    } catch (IOException ex) {
+      if (ex.getCause() instanceof FileIncompleteException && fileSystem instanceof alluxio.hadoop.FileSystem) {
+        if (waitForFileCompleted((alluxio.hadoop.FileSystem) fileSystem, path)) {
+          return fileSystem.open(path);
+        }
+      }
+      throw ex;
+    }
+  }
+
+  /**
+   * Waits for the file to complete before opening it.
+   *
+   * @param path
+   *          the file path to check
+   * @return whether the file is completed or not
+   */
+  private boolean waitForFileCompleted(final alluxio.hadoop.FileSystem fileSystem, final Path path) {
+    try {
+      CommonUtils.waitFor("file completed", () -> {
+        try {
+          AlluxioURI alluxioURI = new AlluxioURI(HadoopUtils.getPathWithoutScheme(path));
+          Field field = AbstractFileSystem.class.getDeclaredField("mFileSystem");
+          field.setAccessible(true);
+          alluxio.client.file.FileSystem fs = (alluxio.client.file.FileSystem) field.get(fileSystem);
+          List<URIStatus> uriStatuses = fs.listStatus(alluxioURI);
+          if (uriStatuses != null && uriStatuses.size() > 0) {
+            URIStatus status = uriStatuses.get(0);
+            return status.isCompleted();
+          }
+          throw new RuntimeException("No file status received from Alluxio for URI: "+alluxioURI.toString());
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }, WaitForOptions.defaults().setTimeoutMs(MAX_OPEN_WAITTIME_MS));
+      return true;
+    } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      return false;
+    } catch (TimeoutException te) {
+      return false;
+    }
   }
 
   @Override

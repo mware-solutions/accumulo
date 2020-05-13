@@ -16,9 +16,6 @@
  */
 package org.apache.accumulo.server.master.recovery;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.util.CachedConfiguration;
@@ -31,6 +28,9 @@ import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 public class HadoopLogCloser implements LogCloser {
 
@@ -64,7 +64,8 @@ public class HadoopLogCloser implements LogCloser {
         ns.append(source).close();
         log.info("Recovered lease on " + source.toString() + " using append");
       }
-    } else if (ns instanceof LocalFileSystem || ns instanceof RawLocalFileSystem) {
+    } else if (ns instanceof LocalFileSystem || ns instanceof RawLocalFileSystem
+            || ns instanceof alluxio.hadoop.FileSystem) {
       // ignore
     } else {
       throw new IllegalStateException(

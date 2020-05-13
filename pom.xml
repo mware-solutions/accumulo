@@ -90,7 +90,7 @@
     <module>server/gc</module>
     <module>server/master</module>
     <module>server/monitor</module>
-    <module>server/native</module>
+<!--    <module>server/native</module>-->
     <module>server/tracer</module>
     <module>server/tserver</module>
     <module>shell</module>
@@ -241,6 +241,11 @@
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>
         <version>1.2.17</version>
+      </dependency>
+      <dependency>
+        <groupId>org.alluxio</groupId>
+        <artifactId>alluxio-core-client-hdfs</artifactId>
+        <version>2.2.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.accumulo</groupId>
