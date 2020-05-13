@@ -80,10 +80,10 @@
     <module>assemble</module>
     <module>core</module>
     <module>docs</module>
-    <module>examples/simple</module>
+<!--    <module>examples/simple</module>-->
     <module>fate</module>
     <module>iterator-test-harness</module>
-    <module>maven-plugin</module>
+<!--    <module>maven-plugin</module>-->
     <module>minicluster</module>
     <module>proxy</module>
     <module>server/base</module>
@@ -1087,6 +1087,11 @@
         <sort.skip>true</sort.skip>
         <spotbugs.skip>true</spotbugs.skip>
         <warbucks.skip>true</warbucks.skip>
+        <rat.skip>true</rat.skip>
+        <checkstyle.skip>true</checkstyle.skip>
+        <skipITs>true</skipITs>
+        <skipTests>true</skipTests>
+        <spotbugs.skip>true</spotbugs.skip>
       </properties>
     </profile>
     <profile>
@@ -1407,7 +1412,7 @@
         </property>
       </activation>
       <properties>
-        <hadoop.version>2.6.4</hadoop.version>
+        <hadoop.version>2.7.3</hadoop.version>
       </properties>
     </profile>
     <!-- Build against hadoop 3 explicitly -->
